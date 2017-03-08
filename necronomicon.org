@@ -1,0 +1,2 @@
+* window manager
+  to get X properties of a window run `xprop`
