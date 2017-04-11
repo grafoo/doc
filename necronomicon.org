@@ -1,2 +1,5 @@
 * window manager
   to get X properties of a window run `xprop`
+* emacs
+** faces
+   - go to line where face to customize can be found hit meta-x customize-face
