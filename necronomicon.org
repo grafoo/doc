@@ -33,3 +33,6 @@
 ssh -O exit <hostname>
 ssh -O check <hostname>
 
+* emacs
+** faces
+   - go to line where face to customize can be found hit meta-x customize-face
