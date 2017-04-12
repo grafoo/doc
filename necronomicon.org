@@ -1,2 +1,35 @@
 * window manager
   to get X properties of a window run `xprop`
+
+* browser
+** firefox
+   - get emacs keybindings when editing text
+     edit ~/.gtkrc-2.0
+     gtk-key-theme-name = "Emacs"
+
+   - change theme (e.g. scrollbar)
+     edit ~/.gtkrc-2.0
+     gtk-theme-name="Adwaita"
+   ref: http://kb.mozillazine.org/Emacs_Keybindings_(Firefox)
+
+* virtualbox
+    openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj "/CN=MOK Signing/"
+
+    sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 ./MOK.priv ./MOK.der $(modinfo -n vboxdrv)
+    sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 ./MOK.priv ./MOK.der $(modinfo -n vboxnetflt)
+    sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 ./MOK.priv ./MOK.der $(modinfo -n vboxnetadp)
+    sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 ./MOK.priv ./MOK.der $(modinfo -n vboxpci)
+
+    # dono if this is really needed
+    sudo mokutil --import MOK.der
+    http://askubuntu.com/questions/787471/virtualbox-5-is-unable-to-create-a-host-only-adapter-on-ubuntu-16-04
+
+* xorg
+  echo "/usr/bin/Xorg                 root:root       4711" >> /etc/permissions.local
+  chkstat --system --set
+
+* ssh
+** control master
+ssh -O exit <hostname>
+ssh -O check <hostname>
+
