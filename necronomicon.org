@@ -11,6 +11,8 @@
      edit ~/.gtkrc-2.0
      gtk-theme-name="Adwaita"
    ref: http://kb.mozillazine.org/Emacs_Keybindings_(Firefox)
+*** change ui
+    ~/.mozilla/firefox/r4nd0m.default/chrome/userChrome.css
 
 * virtualbox
     openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj "/CN=MOK Signing/"
@@ -33,6 +35,9 @@
 ssh -O exit <hostname>
 ssh -O check <hostname>
 
+* keybindings
+** emacs and gtk
+   /usr/share/themes/Emacs/
 * emacs
 ** faces
    - go to line where face to customize can be found hit meta-x customize-face
