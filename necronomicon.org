@@ -15,6 +15,8 @@
      edit ~/.gtkrc-2.0
      gtk-theme-name="Adwaita"
    ref: http://kb.mozillazine.org/Emacs_Keybindings_(Firefox)
+*** change ui
+    ~/.mozilla/firefox/r4nd0m.default/chrome/userChrome.css
 
    ! gtk 3.0
    ~/.config/gtk-3.0/settings.ini
@@ -48,6 +50,9 @@
 ssh -O exit <hostname>
 ssh -O check <hostname>
 
+* keybindings
+** emacs and gtk
+   /usr/share/themes/Emacs/
 * emacs
 ** faces
    - go to line where face to customize can be found hit meta-x customize-face
