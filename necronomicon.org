@@ -260,4 +260,6 @@ Older time synchronization protocols:
 
 * dns
 ** transfer zone
-   dig axfr ims.co.at @ns.ims.co.at
+   dig axfr example.com @nameserver.example.com
+* man
+to make man find manpages in custom places add the path MANPATH variable.
