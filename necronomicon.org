@@ -47,37 +47,38 @@
 
 * ssh
 ** control master
-ssh -O exit <hostname>
-ssh -O check <hostname>
+   ssh -O exit <hostname>
+   ssh -O check <hostname>
 
 * keybindings
 ** emacs and gtk
    /usr/share/themes/Emacs/
+
 * emacs
 ** faces
    - go to line where face to customize can be found hit meta-x customize-face
 
+** build
+   curl -LO https://ftp.gnu.org/gnu/emacs/emacs-25.2.tar.gz
+   tar -xf emacs-25.2.tar.gz
+   cd emacs-25.2/
+   aclocal
+   automake
+   ./configure --with-x-toolkit=no --without-selinux --with-sound=no --prefix="${HOME}/app/emacs-25.2"
+
 * git
 ** commands
 *** git stash show -p                                            :diff:stash:
+
 ** tools
 *** gitolite3
-**** list of remote commands available:
-**- desc
-**- help
-**- info
-**- perms
-**- symbolic-ref
-**- writable
-**** get help
-**ssh user@host help
-**** build
-curl -LO https://ftp.gnu.org/gnu/emacs/emacs-25.2.tar.gz
-tar -xf emacs-25.2.tar.gz
-cd emacs-25.2/
-aclocal
-automake
-./configure --with-x-toolkit=no --without-selinux --with-sound=no --prefix="${HOME}/app/emacs-25.2"
+**** list of remote commands available (invoke with `ssh user@host <command>`)
+     - desc
+     - help
+     - info
+     - perms
+     - symbolic-ref
+     - writable
 
 * ntp
  - shamelessly stolen from http://nlug.ml1.co.uk/2012/01/ntpq-p-output/831
