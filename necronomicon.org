@@ -1,5 +1,9 @@
 * window manager
   to get X properties of a window run `xprop`
+** resize supermicro ipmi kvm window
+  wmctrl -l
+  xprop -id 0x0380001d -remove WM_NORMAL_HINTS
+  wmctrl -i -r 0x0380001d -e '0,0,0,1027,794'
 
 * browser
 ** firefox
@@ -11,6 +15,19 @@
      edit ~/.gtkrc-2.0
      gtk-theme-name="Adwaita"
    ref: http://kb.mozillazine.org/Emacs_Keybindings_(Firefox)
+*** change ui
+    ~/.mozilla/firefox/r4nd0m.default/chrome/userChrome.css
+
+   ! gtk 3.0
+   ~/.config/gtk-3.0/settings.ini
+   [Settings]
+   gtk-key-theme-name = "Emacs"
+** Electrolysis (https://wiki.mozilla.org/Electrolysis)
+   about:config ->
+   - set `dom.ipc.processCount` to e.g. 7
+   - set `browser.tabs.remote.autostart` to true
+** install unsigned xpi
+   set xpinstall.signatures.required to false
 
 * virtualbox
     openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj "/CN=MOK Signing/"
@@ -30,13 +47,24 @@
 
 * ssh
 ** control master
-ssh -O exit <hostname>
-ssh -O check <hostname>
+   ssh -O exit <hostname>
+   ssh -O check <hostname>
+
+* keybindings
+** emacs and gtk
+   /usr/share/themes/Emacs/
 
 * emacs
 ** faces
    - go to line where face to customize can be found hit meta-x customize-face
-     
+** build
+   curl -LO https://ftp.gnu.org/gnu/emacs/emacs-25.2.tar.gz
+   tar -xf emacs-25.2.tar.gz
+   cd emacs-25.2/
+   aclocal
+   automake
+   ./configure --with-x-toolkit=no --without-selinux --with-sound=no --prefix="${HOME}/app/emacs-25.2"
+
 * pxeboot
   http://www.linux-sxs.org/internet_serving/pxeboot.html
 Setting up a PXE-Boot Server
@@ -154,3 +182,200 @@ and verify that they are all in your process list.
 
 15) If you run into any problems, check /var/log/messages for errors (that's where all dhcp & tftp stuff will get logged). /var/log/httpd is where apache logs, but if you get that far, your problem is an apache configuration/setup issue, and not a PXE boot issue.
 
+* git
+** commands
+*** git stash show -p                                            :diff:stash:
+** tools
+*** gitolite3
+**** list of remote commands available (invoke with `ssh user@host <command>`)
+     - desc
+     - help
+     - info
+     - perms
+     - symbolic-ref
+     - writable
+
+* ntp
+ - shamelessly stolen from http://nlug.ml1.co.uk/2012/01/ntpq-p-output/831
+
+The Gentoo (and others?) incomplete man pages for “ntpq -p” merely give the description: “Print a list of the peers known to the server as well as a summary of their state.”
+
+I had not seen this documented, hence here is a summary that can be used in addition to the brief version of the man page “man ntpq“. More complete details are given on: “ntpq – standard NTP query program” (source author), and other examples of the man ntpq pages.
+
+NTP is a protocol designed to synchronize the clocks of computers over a (WAN or LAN) udp network. From Wikipedia – NTP:
+
+    The Network Time Protocol (NTP) is a protocol and software implementation for synchronizing the clocks of computer systems over packet-switched, variable-latency data networks. Originally designed by David L. Mills of the University of Delaware and still maintained by him and a team of volunteers, it was first used before 1985 and is one of the oldest Internet protocols.
+
+For an awful lot more than you might ever want to know about time and NTP, see “The NTP FAQ, Time, what Time?” and the current RFCs for NTP. The earlier “Network Time Protocol (Version 3) RFC” (txt, or pdf, Appendix E, The NTP Timescale and its Chronometry, p70) includes an interesting explanation of the changes in, and relations between, our timekeeping systems over the past 5000 years or so. Wikipedia gives a broader view in the articles Time and Calendar.
+
+The command “ntpq -p” outputs a table such as for example:
+
+     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+ LOCAL(0)        .LOCL.          10 l  96h   64    0    0.000    0.000   0.000
+*ns2.example.com 10.193.2.20      2 u  936 1024  377   31.234    3.353   3.096
+
+Further detail:
+Table headings:
+
+    remote – The remote peer or server being synced to. “LOCAL” is this local host (included in case there are no remote peers or servers available);
+    refid – Where or what the remote peer or server is itself synchronised to;
+    st – The remote peer or server Stratum
+    t – Type (u: unicast or manycast client, b: broadcast or multicast client, l: local reference clock, s: symmetric peer, A: manycast server, B: broadcast server, M: multicast server, see “Automatic Server Discovery“);
+    when – When last polled (seconds ago, “h” hours ago, or “d” days ago);
+    poll – Polling frequency: rfc5905 suggests this ranges in NTPv4 from 4 (16s) to 17 (36h) (log2 seconds), however observation suggests the actual displayed value is seconds for a much smaller range of 64 (26) to 1024 (210) seconds;
+    reach – An 8-bit left-shift shift register value recording polls (bit set = successful, bit reset = fail) displayed in octal;
+    delay – Round trip communication delay to the remote peer or server (milliseconds);
+    offset – Mean offset (phase) in the times reported between this local host and the remote peer or server (RMS, milliseconds);
+    jitter – Mean deviation (jitter) in the time reported for that remote peer or server (RMS of difference of multiple time samples, milliseconds);
+
+Select Field tally code:
+
+The first character displayed in the table (Select Field tally code) is a state flag (see Peer Status Word) that follows the sequence ” “, “x”, “-“, “#”, “+”, “*”, “o”:
+
+    ” ” – No state indicated for:
+        non-communicating remote machines,
+        “LOCAL” for this local host,
+        (unutilised) high stratum servers,
+        remote machines that are themselves using this host as their synchronisation reference;
+    “x” – Out of tolerance, do not use (discarded by intersection algorithm);
+    “–” – Out of tolerance, do not use (discarded by the cluster algorithm);
+    “#” – Good remote peer or server but not utilised (not among the first six peers sorted by synchronization distance, ready as a backup source);
+    “+” – Good and a preferred remote peer or server (included by the combine algorithm);
+    “*” – The remote peer or server presently used as the primary reference;
+    “o” – PPS peer (when the prefer peer is valid). The actual system synchronization is derived from a pulse-per-second (PPS) signal, either indirectly via the PPS reference clock driver or directly via kernel interface.
+
+See the Clock Select Algorithm.
+“refid”:
+
+The refid can have the status values:
+
+    An IP address – The IP address of a remote peer or server;
+    .LOCL. – This local host (a place marker at the lowest stratum included in case there are no remote peers or servers available);
+    .PPS. – “Pulse Per Second” from a time standard;
+    .IRIG. – Inter-Range Instrumentation Group time code;
+    .ACTS. – American NIST time standard telephone modem;
+    .NIST. – American NIST time standard telephone modem;
+    .PTB. – German PTB time standard telephone modem;
+    .USNO. – American USNO time standard telephone modem;
+    .CHU. – CHU (HF, Ottawa, ON, Canada) time standard radio receiver;
+    .DCFa. – DCF77 (LF, Mainflingen, Germany) time standard radio receiver;
+    .HBG. – HBG (LF Prangins, Switzerland) time standard radio receiver;
+    .JJY. – JJY (LF Fukushima, Japan) time standard radio receiver;
+    .LORC. – LORAN-C station (MF) time standard radio receiver. Note, no longer operational (superseded by eLORAN);
+    .MSF. – MSF (LF, Anthorn, Great Britain) time standard radio receiver;
+    .TDF. – TDF (MF, Allouis, France) time standard radio receiver;
+    .WWV. – WWV (HF, Ft. Collins, CO, America) time standard radio receiver;
+    .WWVB. – WWVB (LF, Ft. Collins, CO, America) time standard radio receiver;
+    .WWVH. – WWVH (HF, Kauai, HI, America) time standard radio receiver;
+    .GOES. – American Geosynchronous Orbit Environment Satellite;
+    .GPS. – American GPS;
+    .GAL. – Galileo European GNSS;
+    .ACST. – manycast server;
+    .AUTH. – authentication error;
+    .AUTO. – Autokey sequence error;
+    .BCST. – broadcast server;
+    .CRYPT. – Autokey protocol error;
+    .DENY. – access denied by server;
+    .INIT. – association initialized;
+    .XFAC. – association changed (IP address changed or lost);
+    .MCST. – multicast server;
+    .RATE. – (polling) rate exceeded;
+    .TIME. – association timeout;
+    .STEP. – step time change, the offset is less than the panic threshold (1000ms) but greater than the step threshold (125ms).
+
+Operation notes
+
+A time server will report time information with no time updates from clients (unidirectional updates), whereas a peer can update fellow participating peers to converge upon a mutually agreed time (bidirectional updates).
+
+During initial startup:
+
+    Unless using the iburst option, the client normally takes a few minutes to synchronize to a server. If the client time at startup happens to be more than 1000s distant from NTP time, the daemon exits with a message to the system log directing the operator to manually set the time within 1000s and restart. If the time is less than 1000s but more than 128s distant, a step correction occurs and the daemon restarts automatically.
+
+    When started for the first time and a frequency file is not present, the daemon enters a special mode in order to calibrate the frequency. This takes 900s during which the time is not disciplined. When calibration is complete, the daemon creates the frequency file and enters normal mode to amortize whatever residual offset remains.
+
+Stratum 0 devices are such as atomic (caesium, rubidium) clocks, GPS clocks, or other time standard radio clocks providing a time signal to the Stratum 1 time servers. NTP reports UTC (Coordinated Universal Time) only. Client programs/utilities then use time zone data to report local time from the synchronised UTC.
+
+The protocol is highly accurate, using a resolution of less than a nanosecond (about 2-32 seconds). The time resolution achieved and other parameters for a host (host hardware and operating system limited) is reported by the command “ntpq -c rl” (see rfc1305 Common Variables and rfc5905).
+“ntpq -c rl” output parameters:
+
+    precision is rounded to give the next larger integer power of two. The achieved resolution is thus 2precision (seconds)
+    rootdelay – total roundtrip delay to the primary reference source at the root of the synchronization subnet. Note that this variable can take on both positive and negative values, depending on clock precision and skew (seconds)
+    rootdisp – maximum error relative to the primary reference source at the root of the synchronization subnet (seconds)
+    tc – NTP algorithm PLL (phase locked loop) or FLL (frequency locked loop) time constant (log2)
+    mintc – NTP algorithm PLL/FLL minimum time constant or ‘fastest response’ (log2)
+    offset – best and final offset determined by the combine algorithm used to discipline the system clock (ms)
+    frequency – system clock period (log2 seconds)
+    sys_jitter – best and final jitter determined by the combine algorithm used to discipline the system clock (ms)
+    clk_jitter – host hardware(?) system clock jitter (ms)
+    clk_wander – host hardware(?) system clock wander (PPM – parts per million)
+
+Jitter (also called timing jitter) refers to short-term variations in frequency with components greater than 10Hz, while wander refers to long-term variations in frequency with components less than 10Hz. (Stability refers to the systematic variation of frequency with time and is synonymous with aging, drift, trends, etc.)
+Operation notes (continued)
+
+The NTP software maintains a continuously updated drift correction. For a correctly configured and stable system, a reasonable expectation for modern hardware synchronising over an uncongested internet connection is for network client devices to be synchronised to within a few milliseconds of UTC at the time of synchronising to the NTP service. (What accuracy can be expected between peers on an uncongested Gigabit LAN?)
+
+Note that for UTC, a leap second can be inserted into the reported time up to twice a year to allow for variations in the Earth’s rotation. Also beware of the one hour time shifts for when local times are reported for “daylight savings” times. Also, the clock for a client device will run independently of UTC until resynchronised oncemore, unless that device is calibrated or a drift correction is applied.
+
+What happens during a Leap Second?
+
+    During a leap second, either one second is removed from the current day, or a second is added. In both cases this happens at the end of the UTC day. If a leap second is inserted, the time in UTC is specified as 23:59:60. In other words, it takes two seconds from 23:59:59 to 0:00:00 instead of one. If a leap second is deleted, time will jump from 23:59:58 to 0:00:00 in one second instead of two. See also The Kernel Discipline.
+
+So… What actually is the value for the step threshold: 125ms or 128ms? And what are the PLL/FLL tc units (log2 s? ms?)? And what accuracy can be expected between peers on an uncongested Gigabit LAN?
+
+ 
+
+Thanks for comments from Camilo M and Chris B. Corrections and further details welcomed.
+
+Cheers,
+Martin
+
+ 
+Apocrypha:
+
+    The epoch for NTP starts in year 1900 while the epoch in UNIX starts in 1970.
+    Time corrections are applied gradually, so it may take up to three hours until the frequency error is compensated.
+    Peerstats and loopstats can be logged to summarise/plot time offsets and errors
+    RMS – Root Mean Square
+    PLL – Phase locked loop
+    FLL – Frequency locked loop
+    PPM – Parts per million, used here to describe rate of time drift
+    man ntpq (Gentoo brief version)
+    man ntpq (long version)
+    man ntpq (Gentoo long version)
+
+See:
+
+    ntpq – standard NTP query program
+    The Network Time Protocol (NTP) Distribution
+    A very brief history of NTP
+    A more detailed brief history: “Mills, D.L., A brief history of NTP time: confessions of an Internet timekeeper. Submitted for publication; please do not cite or redistribute” (pdf)
+    NTP RFC standards documents
+    Network Time Protocol (Version 3) RFC – txt, or pdf. Appendix E, The NTP Timescale and its Chronometry, p70, includes an interesting explanation of the changes in, and relations between, our timekeeping systems over the past 5000 years or so
+    Wikipedia: Time and Calendar
+    John Harrison and the Longitude problem
+    Clock of the Long Now – The 10,000 Year Clock
+    John C Taylor – Chronophage
+    Orders of magnitude of time
+    The Greenwich Time Signal
+
+Others:
+
+SNTP (Simple Network Time Protocol, RFC 4330) is basically also NTP, but lacks some internal algorithms for servers where the ultimate performance of a full NTP implementation based on RFC 1305 is neither needed nor justified.
+
+The W32Time Windows Time Service is a non-standard implementation of SNTP, with no accuracy guarantees, and an assumed accuracy of no better than about a 1 to 2 second range. (Is that due to there being no system clock drift correction and a time update applied only once every 24 hours assumed for a PC with typical clock drift?)
+
+There is also the PTP (IEEE 1588) Precision Time Protocol. See Wikipedia: Precision Time Protocol. A software demon is PTPd. The significant features are that it is intended as a LAN high precision master-slave synchronisation system synchronising at the microsecond scale to a master clock for International Atomic Time (TAI, monotonic, no leap seconds). Data packet timestamping can be appended by hardware at the physical layer by a network interface card or switch for example. Network kit supporting PTP can timestamp data packets in and out in a way that removes the delay effect of processing within the switch/router. You can run PTP without hardware timestamping but it might not synchronise if the time errors introduced are too great. Also it will struggle to work through a router (large delays) for the same reason.
+Older time synchronization protocols:
+
+    DTSS – Digital Time Synchronisation Service by Digital Equipment Corporation, superseded by NTP. See an example of DTSS VMS C code c2000. (Any DTSS articles/documentation anywhere?)
+    DAYTIME protocol, synchronization protocol using TCP or UDP port 13
+    ICMP Timestamp and ICMP Timestamp Reply, synchronization protocol using ICMP
+    Time Protocol, synchronization protocol using TCP or UDP port 37
+
+* dns
+** transfer zone
+   dig axfr example.com @nameserver.example.com
+
+* man
+  to make man find manpages in custom places add the path MANPATH variable.
