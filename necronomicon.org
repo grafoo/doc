@@ -261,5 +261,155 @@ Older time synchronization protocols:
 * dns
 ** transfer zone
    dig axfr example.com @nameserver.example.com
+* network
+** vlan
+modprobe --first-time 8021q
+modinfo 8021q
+
+create an 802.1Q VLAN interface on Ethernet interface eth0, with name VLAN8 and ID 8
+ip link add link eth0 name eth0.8 type vlan id 8
+
+
+remove the VLAN
+ip link delete eth0.8
+** routing
+https://www.thomas-krenn.com/en/wiki/Two_Default_Gateways_on_One_System
+https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s1-networkscripts-static-routes.html
 * man
 to make man find manpages in custom places add the path MANPATH variable.
+* remote management
+** supermicro
+
+   smcipmitool 192.168.1.123 username password shell
+   vmwa dev2iso /path/to/image.iso
+   vmwa status
+   vmwa dev2stop
+* terminal
+** install new terminal definition
+mkdir -p $HOME/.terminfo
+rsync /usr/share/terminfo/ $HOME/.terminfo/
+export TERMINFO=$HOME/.terminfo
+tic <terminfofile>
+* rpm
+- %pre - Executed before installation.
+- %preun - Executed before un-installation.
+- %post - Executed after installation.
+- %postun - Executed after un-installation.
+
+
+in the different variants $1 will have following values:
+
+|                      | %pre | %preun | %post | %postun |
+| initial installation |    1 |   null |     1 |    null |
+| upgrade              |    2 |      1 |     2 |       1 |
+| uninstallation       | null |      0 |  null |       0 |
+
+
+
+
+| install      | upgrade                                | uninstall      |
+| %pre ($1=1)  | %pre ($1=2)                            | %preun ($1=0)  |
+| copy files   | copy files                             | remove files   |
+| %post ($1=1) | %post ($1=2)                           | %postun ($1=0) |
+|              | %preun ($1=1) from old RPM.            |                |
+|              | delete files only found in old package |                |
+|              | %postun ($1=1) from old RPM.           |                |
+
+
+So when upgrading the exemplary package "software" from version 1 to version 2,
+this is the script (%post and %postun) order:
+
+1. Run %pre from "software-2".
+2. Place files from "software-2".
+3. Run %post from "software-2".
+4. Run %preun from "software-1".
+5. Delete files unique to "software-1".
+6. Run %postun from "software-1".
+
+This means there are cases where "software-1" has incorrect scripts, and there is no way to upgrade.
+In that case the RPM can be uninstalled, which might execute different commands
+because $1 equals 0 (un-install) instead of 1 (upgrade).
+When the RPM uninstall scripts fail, the only way to fix things is to manually execute the intended commands...
+RPM is not perfect, but it's pretty well thought through!
+
+
+http://meinit.nl/rpm-spec-prepostpreunpostun-argument-values
+https://fedoraproject.org/wiki/Packaging:Scriptlets
+* schmankerl
+dd if=/dev/sda bs=8M | gzip --best - | ssh user@host dd of=/home/user/foo.$(date +%F-%s).dd.gz
+* infiniband
+http://wwwx.cs.unc.edu/Research/bass/index.php/InfiniBand_Testing
+** customize image
+found on https://forums.servethehome.com/index.php?threads/flash-oem-ibm-mellanox-connectx-3-en-with-stock-firmware.8689/
+
+
+Cross-flashing to Mellanox FW (ConnextX-2 or ConnextX-3 based devices only)
+Not tested with all devices - may brick yours permanently - YMMV!
+
+    First, backup the existing configuration if you ever need to recover it and to compare notes post-flash
+
+1. Save basic info such as GUIDs, MACs, etc.:
+Code:
+
+flint -d <device> query full > flint_query.txt
+
+2. Save low-level flash chip info:
+Code:
+
+flint -d <device> hw query > flint_hwinfo.txt
+
+3. Save existing FW:
+Code:
+
+flint -d <device> ri orig_firmware.bin
+
+4. Save existing FW configuration:
+Code:
+
+flint -d <device> dc orig_firmware.ini
+
+5. Save existing PXE ROM image (if any):
+Code:
+
+flint -d <device> rrom orig_rom.bin
+
+6. Save existing PCI VPD (vital product data):
+Code:
+
+mlxburn -d <device> -vpd > orig_vpd.txt
+
+    Now, download "custom" Mellanox firmware tarball for your adapter from here (e.g. for the MCX312A-XCBT) and extract. Note that it must contain a multi-adapter MLX firmware file, NOT a BIN file.
+    Finally, customize and burn:
+
+1. Identify the correct configuration file for your device/revision (here, it's MCX_312A-XCB_A2-A6.ini)
+2. "Burn" the new firmware to an image file (not the device) with the correct config:
+Code:
+
+mlxburn -fw fw-ConnectX3-rel.mlx -conf MCX312A-XCB_A2-A6.ini -wrimage mlnx_firmware.bin
+
+3. Verify the image is good with flint (no errors or warnings, should say "is bootable"):
+Code:
+
+flint -i mlnx_firmware.bin verify
+
+4. And check that the image's FW version and PSID are what you want:
+Code:
+
+flint -i mlnx_firmware.bin query full
+
+5. Let's roll!
+Code:
+
+flint -d <device> -i mlnx_firmware.bin -allow_psid_change burn
+
+Reboot, and verify with flint that the PSID has changed while the GUIDs/MACs are the same as before.
+* linux
+** boot
+  | Depth | 800×600 | 1024×768 | 1152×864 | 1280×1024 | 1600×1200 |
+
+                                                      
+  -------------------------------------------------------------
+  | 8 bit  | vga=771 | vga=773 | vga=353 | vga=775 | vga=796 |
+  | 16 bit | vga=788 | vga=791 | vga=355 | vga=794 | vga=798 |
+  | 24 bit | vga=789 | vga=792 | vga=795 | vga=799 |         |
+  |        |         |         |         |         |         |
