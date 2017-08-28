@@ -57,7 +57,6 @@
 * emacs
 ** faces
    - go to line where face to customize can be found hit meta-x customize-face
-
 ** build
    curl -LO https://ftp.gnu.org/gnu/emacs/emacs-25.2.tar.gz
    tar -xf emacs-25.2.tar.gz
@@ -66,10 +65,126 @@
    automake
    ./configure --with-x-toolkit=no --without-selinux --with-sound=no --prefix="${HOME}/app/emacs-25.2"
 
+* pxeboot
+  http://www.linux-sxs.org/internet_serving/pxeboot.html
+Setting up a PXE-Boot Server
+Written by Net Llama! on 17-Sept-2005
+
+
+
+This documents how to setup a PXE boot server for Linux. This assumes that you're using Redhat/FC as the PXE boot server. The vast majority of the information has been obtained from the following webpages:
+
+http://dev.brantleyonline.com/wiki/index.php/General_Network_%28PXE%29_Booting
+http://dev.brantleyonline.com/wiki/index.php/PXE_Booting_-_Fedora_Core
+
+0) The first thing to note is that you need to setup your own mini-network that is completely disconnected from the network, since part of this process requires setting up a DHCP server which could conflict with the corporate DHCP server if they were both running on the same network simultaneously. So get yourself a switch from IT up front. You do *NOT* need the switch immediately, so just put it aside until I mention it again
+later on.
+
+1) The next step is to choose a box to be the PXE boot server. This can really be any box at all, as long as you have a NIC in it that works reliably under Linux. For the purposes of this documentation, I'm going to assume that you've loaded Fedora Core 4 on this box (do that now, if you've not already). Get this box onto the network with DHCP (just like a normal installation).
+
+2) Next you'll need to install the following packages (which ship with FC4 already, so if you did an 'everything' OS install, you should have them already. If not, you can install them easily with yum):
+tftp-server
+dhcp
+httpd
+syslinux
+
+If you use yum to install them, then it will be generally alot easier:
+yum install tftp-server dhcp httpd syslinux
+answer Y to all dependency/installation questions.
+
+3) Now you need to setup the DHCP server. With the FC4 RPM for dhcp, all you need to do is create /etc/dhcpd.conf with the following contents:
+
+ddns-update-style interim;
+subnet 192.168.0.0 netmask 255.255.255.0 {
+range 192.168.0.10 192.168.0.254;
+default-lease-time 3600;
+max-lease-time 4800;
+option routers 192.168.0.1;
+option domain-name-servers 192.168.0.1;
+option subnet-mask 255.255.255.0;
+option domain-name "llama.net";
+option time-offset -8;
+}
+
+host llama0 {
+hardware ethernet 04:4B:80:80:80:03;
+fixed-address 192.168.0.254;
+option host-name "llama0";
+filename "pxelinux.0";
+}
+
+In a nutshell, this sets up a DNS server that will assign IP address 192.168.0.254 to your client box that has MAC address 04:4B:80:80:80:03 assigned to its PXE-boot capable NIC. Another thing to note is that we're reserving the private 192.168 subnet for this setup. The only thing you need to change in the above, is the MAC address to match that of the NIC on your client box.
+
+4) Next you need to activate tftp within xinetd. All that is neccesary is to change disable=yes to disable=no in /etc/xinetd.d/tftp . Then restart xinetd. For future reference, the tftp RPM for FC4 stores its servable content under /tftpboot.
+
+5) Now we need to setup your PXE server to use a static IP on the new private subnet. Create the file /etc/sysconfig/network-scripts/ifcfg-eth0.static with the following contents:
+
+DEVICE=eth0
+BOOTPROTO=STATIC
+ONBOOT=no
+TYPE=Ethernet
+IPADDR=192.168.0.2
+NETMASK=255.255.255.0
+GATEWAY=192.168.0.1
+
+6) Now we need to setup the PXE boot environment on the server. To do this, you need to have either the Linux distribution that you wish to install over PXE either in CD format, or all the content of the CDs available on the network.
+On the first CD of every RH/FC distribution there is a subdirectory called 'isolinux'. In that directory you will find two files, vmlinuz and initrd.img. These are the kernel & initrd.img that the RH/FC bootable CDs use to get the installer (anaconda) booted for performing the installation. Copy both of those files into /tftpboot and make sure that they are world readable. If you are planning to allow more than one version/distribution to be PXE boot installable, then you should rename both files so that its clear that they are for whatever version/distribution they came from (such as vmlinuz-RHEL4, initrd-RHEL4).
+
+Next, you need the actual pxe boot linux kernel (what is actually run immediately after your PXE boot client box gets a DHCP lease). In this case, that file is pxelinux.0, and is part of the syslinux RPM. For FC4, you can find it at /usr/lib/syslinux/pxelinux.0. Copy that file into /tftpboot and make sure that it is world readable.
+
+7) Next we need to configure pxelinux. First create the directory /tftpboot/pxelinux.cfg (and make it world readable). Inside that directory you need to create a number of zero size files (use touch):
+01-04-4B-80-80-80-03
+C
+C0
+C0A
+C0A8
+C0A80
+C0A800
+C0A800F
+C0A800FE
+01-04-4B-80-80-80-03
+
+The first 8 are the hex representation of the 192.168.0.254 IP address that your PXE boot client will be assigned. The permutations allow a broader IP subnet to be searched first for matches. The last entry is the MAC address of your PXE boot client's NIC (with dashes substituted for the colons), with '01' pre-pended. The "01" at the front represents a hardware type of Ethernet, so pxelinux.0 see's the configuration string as an IP address.
+
+8) Now create the default pxelinux configuration inside the new file
+/tftpboot/pxelinux.cfg/default:
+prompt 1
+default linux
+timeout 100
+
+label linux
+kernel vmlinuz
+append initrd=initrd.img ramdisk_size=9216 noapic acpi=off
+
+
+9) Now you need to put the full contents of your Linux distro (all CDs) somewhere on disk. I put it under /tftpboot/RHEL4U1. In order to allow for installation over HTTP (apache), edit /etc/httpd/conf/httpd.conf and add the following:
+<Directory /tftpboot/RHEL4U1>
+Options Indexes
+AllowOverride None
+</Directory>
+Alias /linux /tftpboot/RHEL4U1
+
+
+10) At this stage, you're ready to hook up the switch. You should have CAT5 running between the switch & the PXE boot server, and the client box.
+
+11) On the PXE boot server, bring down your DHCP network connected eth0 (ifdown eth0), disconnect the CAT5 connected to the network, and plug in the cat5 connected to your private switch. Now bring up the static IP for the PXE server with (ifup eth0.static). You can verify that it came up successfully by verifying that you have IP address 192.168.0.2 in ifconfig.
+
+12) Now start dhcpd & apache and activate tftp by running the following:
+service dhcpd start
+service xinetd restart
+service httpd start
+
+and verify that they are all in your process list.
+
+13) Plug the PXE client box's CAT5 into the switch, and verify that the NIC appears first in the BIOS boot order. (re)boot and you should get a DHCP lease, and start booting successfully off the network.
+
+14) When you get into the RH/FC installer which asks you for the install method, choose HTTP. Fill in 192.168.0.2 for the name, and 'linux' for the path, and you should be all set.
+
+15) If you run into any problems, check /var/log/messages for errors (that's where all dhcp & tftp stuff will get logged). /var/log/httpd is where apache logs, but if you get that far, your problem is an apache configuration/setup issue, and not a PXE boot issue.
+
 * git
 ** commands
 *** git stash show -p                                            :diff:stash:
-
 ** tools
 *** gitolite3
 **** list of remote commands available (invoke with `ssh user@host <command>`)
