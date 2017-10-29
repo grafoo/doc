@@ -1,0 +1,16 @@
+format disk with two partitions
+primary 2048 +600M 
+primary +600M +rest and leave some empty space
+
+mkfs.vfat /dev/sdb1
+
+   98  mke2fs -t ext4 -L persistence -O '^has_journal' /dev/sdb2
+  101  tune2fs -o 'journal_data_writeback,discard' /dev/sdb2
+  102  e2fsck -f /dev/sdb2
+  104  mount /dev/sdb2 /mnt
+  105  echo '/ union' > /mnt/persistence.conf
+
+  107  sync
+
+umount /mnt
+grml2usb --bootoptions="persistence" grml.iso /dev/sdb1
