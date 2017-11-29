@@ -390,6 +390,12 @@ ip link delete eth0.8
 ** routing
 https://www.thomas-krenn.com/en/wiki/Two_Default_Gateways_on_One_System
 https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s1-networkscripts-static-routes.html
+
+#+BEGIN_SRC sh
+sysctl net.ipv4.ip_forward=1
+iptables -t nat -A POSTROUTING -o <interface> -j MASQUERADE
+#+END_SRC
+
 * man
 to make man find manpages in custom places add the path MANPATH variable.
 * remote management
@@ -528,3 +534,80 @@ Reboot, and verify with flint that the PSID has changed while the GUIDs/MACs are
   | 16 bit | vga=788 | vga=791 | vga=355 | vga=794 | vga=798 |
   | 24 bit | vga=789 | vga=792 | vga=795 | vga=799 |         |
   |        |         |         |         |         |         |
+** hardware
+*** consistent nic naming
+https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Networking_Guide/sec-Disabling_Consistent_Network_Device_Naming.html
+https://access.redhat.com/discussions/916973
+ln -s /dev/null /etc/udev/rules.d/80-net-name-slot.rules
+#+BEGIN_SRC sh
+cp -a /etc/default/grub /etc/default/grub.tmp &&
+            awk '/^GRUB_CMDLINE_LINUX/{sub("\"$"," net.ifnames=0\"");print}' \
+                /etc/default/grub.tmp > foo &&
+                rm /etc/default/grub.tmp
+#+END_SRC
+Note that the biosdevname package is not installed by default, so unless it gets installed, you don't need to add biosdevname=0 as a kernel argument.
+
+* initramdisk
+** initramfs vs initrd
+*** initrd
+- fixed size block device formated with filesystem e.g. ext2
+- mapped to /dev/ram0
+- supports pivot_root (required for switching from initrd to root)
+*** initramfs
+- cpio archive
+- unpacked during boot to ramfs
+
+** un/re-pack initrd
+# mkdir test
+# cd test
+
+    Then uncompress and extract the initrd:
+
+Raw
+
+# zcat /boot/initrd-2.6.18-164.6.1.el5.img | cpio -idmv
+
+    Edit the contents (if needed)
+    Finally repack and compress the initrd image:
+
+Raw
+
+# find . | cpio -o -c | gzip -9 > /boot/test.img
+
+    For image compressed with xz format, the below commands can be used to extract the initrd image.
+
+Raw
+
+# mkdir /tmp/initrd
+# cd /tmp/initrd
+# xz -dc < initrd.img | cpio --quiet -i --make-directories 
+
+    Edit the contents (if needed)
+    Finally repack and compress the initrd image:
+
+Raw
+
+# cd /tmp/initrd
+# find . 2>/dev/null | cpio --quiet -c -o | xz -9 --format=lzma >"new_initrd.img"
+
+* lvm
+** snapshots
+#+BEGIN_SRC sh
+# when mounting xfs volumes nouuid is needed
+mount -o ro,nouuid /dev/vg_system/lv_root_snapshot_pristine /mnt
+cd /var/opt &&
+  tar --create --one-file-system --xattrs --bzip2 --verbose --exclude=/var/opt --file=host_root.tar.bz2 /
+#+END_SRC
+
+dracut --force --add-drivers dm-snapshot
+lsinitrd /boot/initramfs-$(uname -r).img|grep dm-snapshot
+lvcreate -s --name lv_root_s --size 70G vg_system/lv_root
+mount -o ro,nouuid /dev/vg_system/lv_root_s /mnt
+
+yum -y install epel-release
+yum -y install lbzip2
+ln -s /usr/bin/lbzip2 /usr/local/bin/bzip2
+tar --create --one-file-system --xattrs --bzip2 --verbose --exclude='tmp/*' --file=/root/ironic_root.tar.bz2 -C /mnt .
+tar --create --one-file-system --xattrs --bzip2 --verbose --file=/root/ironic_boot.tar.bz2 -C /boot .
+umount /mnt
+lvconvert --merge vg_system/lv_root_s
